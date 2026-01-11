@@ -1,0 +1,96 @@
+paketebi:
+
+& "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" --version
+თუ ვერსიას დაბეჭდავს — OK ✅
+
+& "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" pull gemma3:4b
+& "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" pull nomic-embed-text
+& "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" list
+
+PyCharm პროექტი და Virtualenv
+
+PyCharm → New Project
+
+შექმენი Virtualenv (.venv) (PyCharm თვითონ შექმნის)
+
+შემდეგ დარწმუნდი, რომ Terminal-ში ჩანს (.venv) — ანუ სწორ გარემოში ხარ.
+
+python -m pip install -U langchain langchain-core langchain-community langchain-text-splitters langchain-ollama chromadb langchain-chroma pypdf
+
+Virtualenv/
+  data/
+    book.pdf
+  chroma_db/
+  ingest.py
+  chat.py
+
+amis mere ingest gaushvi.
+
+mere chat da shektixvebi dausvi
+
+შეკითხვები:
+1) ზუსტი დეტალები (PDF-იდან “ამოღება”) (pdf wigni githubzea)
+
+How much money does Della have at the start (exact amount)?
+
+What day is “the day before Christmas” in the story?
+
+How much is the rent per week?
+
+What is written beside the door (the name)?
+
+From what to what did Jim’s salary change?
+
+What are the two things the couple is most proud of?
+
+How is the mirror described in the room?
+
+How long is Della’s hair (how far does it reach)?
+
+Who does Della sell her hair to (name/title)?
+
+How much does she receive for her hair?
+
+What gift does Della buy for Jim (exact item)?
+
+How much does she pay for it?
+
+What time does Della say dinner will be ready?
+
+What does Jim place on the table when he comes home?
+
+What gift did Jim buy for Della (exact item)?
+
+2) სიუჟეტი და აზრი
+
+Why is Della crying at the beginning?
+
+What sacrifice does Della make and why?
+
+What sacrifice does Jim make and why?
+
+Describe Jim’s first reaction when he sees Della.
+
+What is the twist ending? Explain it clearly.
+
+What is the biggest example of irony in the story?
+
+What lesson does the story teach about love and gifts?
+
+Why does the narrator mention the “Magi”?
+
+Who is described as “wise” in the ending, and why?
+
+What is the theme (sacrifice, love, poverty, etc.)? Give 2 proofs from the text.
+
+3) “RAG” ტესტი (აიძულებს ტექსტიდან მოიტანოს)
+
+Quote one sentence that shows they are poor.
+
+Quote one sentence describing Della’s hair.
+
+Find the line where Della asks God something—what does she ask?
+
+What exact words are on the hair shop sign?
+
+What exact line shows Jim no longer has his watch?
