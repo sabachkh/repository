@@ -1,0 +1,81 @@
+//Ingest
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_ollama import OllamaEmbeddings
+from langchain_community.vectorstores import Chroma
+
+PDF_PATH = "data/book.pdf"
+DB_DIR = "chroma_db"
+COLLECTION = "book"
+
+def main():
+    loader = PyPDFLoader(PDF_PATH)
+    docs = loader.load()
+
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
+    chunks = splitter.split_documents(docs)
+
+    embeddings = OllamaEmbeddings(model="nomic-embed-text")
+
+    Chroma.from_documents(
+        documents=chunks,
+        embedding=embeddings,
+        persist_directory=DB_DIR,
+        collection_name=COLLECTION
+    )
+
+    print("OK")
+
+if __name__ == "__main__":
+    main()
+
+
+//Chat
+from langchain_chroma import Chroma
+from langchain_ollama import ChatOllama, OllamaEmbeddings
+from langchain_core.prompts import ChatPromptTemplate
+
+DB_DIR = "chroma_db"
+COLLECTION = "book"
+
+def main():
+    embeddings = OllamaEmbeddings(model="nomic-embed-text")
+
+    db = Chroma(
+        persist_directory=DB_DIR,
+        collection_name=COLLECTION,
+        embedding_function=embeddings
+    )
+
+    retriever = db.as_retriever(search_kwargs={"k": 5})
+    llm = ChatOllama(model="gemma3:4b", temperature=0)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system",
+         "Answer ONLY using the provided CONTEXT from the PDF. "
+         "If the answer is not in the CONTEXT, say: 'I can't find the exact answer in this PDF.' "
+         "Do NOT invent information. "
+         "Write your answer in English, clearly and briefly."),
+        ("human", "Question: {question}\n\nCONTEXT:\n{context}")
+    ])
+
+    print("Chat started ✅ (type: exit to quit)\n")
+
+    while True:
+        q = input("Ask (exit): ").strip()
+        if q.lower() in {"exit", "quit"}:
+            break
+        if not q:
+            continue
+
+        docs = retriever.invoke(q)
+        context = "\n\n".join(d.page_content for d in docs)
+
+        messages = prompt.format_messages(question=q, context=context)
+        answer = llm.invoke(messages)
+
+        print("\nAnswer:\n", answer.content, "\n")
+        print("-" * 60)
+
+if __name__ == "__main__":
+    main()
