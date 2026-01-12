@@ -1,0 +1,26 @@
+//blip_caption
+import argparse
+import torch
+from PIL import Image
+from transformers import BlipProcessor, BlipForConditionalGeneration
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", default="Images/test.jpg", help="Path to image file")
+    parser.add_argument("--model", default="Salesforce/blip-image-captioning-base")
+    args = parser.parse_args()
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    processor = BlipProcessor.from_pretrained(args.model)
+    model = BlipForConditionalGeneration.from_pretrained(args.model).to(device)
+
+    image = Image.open(args.image).convert("RGB")
+    inputs = processor(image, return_tensors="pt").to(device)
+
+    output_ids = model.generate(**inputs, max_new_tokens=30)
+    caption = processor.decode(output_ids[0], skip_special_tokens=True)
+
+    print("Caption:", caption)
+
+if __name__ == "__main__":
+    main()
