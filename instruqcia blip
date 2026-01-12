@@ -1,0 +1,35 @@
+1) პროექტის შექმნა (PyCharm)
+
+PyCharm → New Project
+
+აირჩიე Virtualenv (.venv)
+
+Python იყოს 3.11 (რეკომენდაცია)
+
+შექმენი პროექტი, მაგალითად: Blip
+
+2) ფოლდერები და ფაილები
+სტრუქტურა:
+Blip/
+  .venv/
+  Images/
+    test.jpg
+  blip_caption.py
+3) პაკეტების დაყენება (Terminal-ში)
+python -m pip install -U torch torchvision --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -U transformers pillow accelerate
+4) კოდის ჩასმა (blip_caption.py)
+5) ფოტოს ჩაგდება
+ჩააგდე ნებისმიერი ფოტო Images/ ფოლდერში და დაარქვი test.jpg
+6) გაშვება (ორი გზა)
+გზა A — Terminal-იდან (ყველაზე მარტივი) python blip_caption.py --image Images/test.jpg
+
+გზა B — Run ღილაკით (საგამოცდოდ კომფორტულია)
+
+Run → Edit Configurations
+
+Script path: აირჩიე blip_caption.py
+
+Parameters:--image Images/test.jpg
+Working directory:C:\Users\gogis\OneDrive\Desktop\Blip
+RUN
