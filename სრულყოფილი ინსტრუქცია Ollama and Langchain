@@ -1,0 +1,168 @@
+1) Ollama — შემოწმება და მოდელები (ერთჯერადად)
+
+PyCharm Terminal (PowerShell): 
+& "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" --version
+
+& "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" pull gemma3:4b
+& "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" pull nomic-embed-text
+& "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" list
+
+2) PyCharm პროექტი და Virtualenv
+
+PyCharm → New Project
+
+Virtualenv (.venv) (ავტომატურად)
+
+Terminal-ში უნდა ეწეროს (.venv) ✅
+
+📌 გამოიყენე Python 3.11/3.12.
+
+3) Python პაკეტები (ერთჯერადად)
+
+Terminal-ში:
+python -m pip install -U langchain langchain-core langchain-community langchain-text-splitters langchain-ollama chromadb langchain-chroma pypdf streamlit
+
+python -m pip list (როგორ ნახო რა არის დაყენებული. შეგიძლია გამოიყენო სურვილისამებრ).
+
+4) პროექტის სტრუქტურა (აუცილებლად ასე)
+
+Project root-ში გააკეთე:
+LangChANDOllama/
+  data/
+    book.pdf
+  chroma_db/
+  ingest.py
+  streamlit_app.py
+
+5) ingest.py:
+from pathlib import Path
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_ollama import OllamaEmbeddings
+from langchain_chroma import Chroma
+
+BASE_DIR = Path(__file__).resolve().parent
+PDF_PATH = BASE_DIR / "data" / "book.pdf"
+DB_DIR = BASE_DIR / "chroma_db"
+COLLECTION = "book"
+
+def main():
+    docs = PyPDFLoader(str(PDF_PATH)).load()
+
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
+    chunks = splitter.split_documents(docs)
+
+    embeddings = OllamaEmbeddings(model="nomic-embed-text")
+
+    Chroma.from_documents(
+        documents=chunks,
+        embedding=embeddings,
+        persist_directory=str(DB_DIR),
+        collection_name=COLLECTION
+    )
+
+    print("OK ✅ Indexed:", len(chunks), "chunks")
+
+if __name__ == "__main__":
+    main()
+
+5.1 ingest.py გაშვება
+
+PyCharm → Run ingest.py
+
+6) streamlit_app.py:
+from pathlib import Path
+import streamlit as st
+from langchain_chroma import Chroma
+from langchain_ollama import ChatOllama, OllamaEmbeddings
+from langchain_core.prompts import ChatPromptTemplate
+
+BASE_DIR = Path(__file__).resolve().parent
+DB_DIR = BASE_DIR / "chroma_db"
+COLLECTION = "book"
+
+st.set_page_config(page_title="RAG Q&A", layout="centered")
+st.title("RAG Q&A (LangChain + Ollama + ChromaDB)")
+st.write("Ask a question. The answer must come only from the indexed document.")
+
+@st.cache_resource
+def load_rag():
+    embeddings = OllamaEmbeddings(model="nomic-embed-text")
+    db = Chroma(
+        persist_directory=str(DB_DIR),
+        collection_name=COLLECTION,
+        embedding_function=embeddings
+    )
+
+    retriever = db.as_retriever(search_kwargs={"k": 5})
+    llm = ChatOllama(model="gemma3:4b", temperature=0)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system",
+         "Answer ONLY using the provided CONTEXT from the document. "
+         "If the answer is not in the CONTEXT, say: 'I can't find the exact answer in this document.' "
+         "Do NOT invent information."),
+        ("human", "Question: {question}\n\nCONTEXT:\n{context}")
+    ])
+
+    return retriever, llm, prompt
+
+retriever, llm, prompt = load_rag()
+
+q = st.text_area("Prompt", height=120, placeholder="Type your question here...")
+
+if st.button("Get Answer"):
+    q = q.strip()
+    if not q:
+        st.warning("Type a question first.")
+    else:
+        docs = retriever.invoke(q)
+        context = "\n\n".join(d.page_content for d in docs)
+
+        messages = prompt.format_messages(question=q, context=context)
+        answer = llm.invoke(messages).content
+
+        st.subheader("Answer")
+        st.write(answer)
+
+        with st.expander("Show retrieved context"):
+            st.text(context)
+
+7) Streamlit გაშვება Run ღილაკით (Terminal-ის გარეშე)
+
+Run → Edit Configurations…
+
+Type: Python
+
+dropdown სადაც წერია script → შეცვალე Module name
+
+Module name: streamlit
+
+Parameters: run streamlit_app.py
+
+Working directory: პროექტის root (სადაც ეს ფაილები დევს)
+
+მაგ:
+C:\Users\gogis\OneDrive\Desktop\LangChANDOllama
+
+დააჭირე Run ▶️
+კონსოლში გამოჩნდება ლინკი (ხშირად http://localhost:8501) და გახსნი.
+
+----------------------------------------------------------------------------------------------------------------------
+✅ 5 Questions (PDF-იდან ზუსტი პასუხები უნდა იპოვოს)
+
+How much money does Della have at the start (exact amount)?
+
+What are the two things Jim and Della are most proud of?
+
+From what to what did Jim’s salary change?
+
+How much does Della receive for selling her hair?
+
+What gift does Della buy for Jim (exact item)?
+
+⚠️ 2 Trap Questions (PDF-ში არ უნდა იყოს → უნდა თქვას “I can’t find…”)
+
+What is Jim’s middle name?
+
+In which city does the story take place (name the city explicitly)?
