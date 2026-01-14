@@ -1,0 +1,245 @@
+STEP 1 — Router0 (CENTER) interfaces (IP + serial):
+
+enable
+conf t
+
+interface g0/2
+ ip address 10.10.10.1 255.255.255.224
+ no shutdown
+exit
+
+interface g0/0
+ ip address 12.1.0.1 255.255.255.252
+ no shutdown
+exit
+
+interface s0/3/0
+ ip address 12.2.0.2 255.255.255.252
+ no shutdown
+exit
+
+interface g0/1
+ no shutdown
+exit
+
+interface g0/1.20
+ encapsulation dot1Q 20
+ ip address 10.10.20.1 255.255.255.0
+exit
+
+interface g0/1.30
+ encapsulation dot1Q 30
+ ip address 10.10.30.1 255.255.255.0
+exit
+
+end
+wr
+
+STEP 2 — Router2 (TOP) interfaces + OSPF:
+
+enable
+conf t
+
+interface g0/0
+ ip address 10.10.40.1 255.255.255.0
+ no shutdown
+exit
+
+interface s0/3/0
+ ip address 12.2.0.1 255.255.255.252
+ no shutdown
+exit
+
+router ospf 1
+ network 12.2.0.0 0.0.0.3 area 0
+ network 10.10.40.0 0.0.0.255 area 0
+end
+
+wr
+
+STEP 3 — Router1 (RIGHT) interfaces + DHCP + RIP:
+
+enable
+conf t
+
+interface g0/0
+ ip address 12.1.0.2 255.255.255.252
+ no shutdown
+exit
+
+interface g0/1
+ ip address 12.4.0.1 255.255.255.0
+ no shutdown
+exit
+
+ip dhcp excluded-address 12.4.0.1 12.4.0.20
+ip dhcp pool DHCP_RIGHT
+ network 12.4.0.0 255.255.255.0
+ default-router 12.4.0.1
+ dns-server 8.8.8.8
+exit
+
+router rip
+ version 2
+ no auto-summary
+ network 12.1.0.0
+ network 12.4.0.0
+ passive-interface g0/1
+end
+
+wr
+
+STEP 4 — Switch2 + Switch3 VLAN + trunk (Inter-VLAN part)
+
+Switch2 (BOTTOM LEFT):
+
+enable
+conf t
+
+vlan 20
+vlan 30
+exit
+
+interface fa0/1
+ switchport mode trunk
+ switchport trunk allowed vlan 20,30
+exit
+
+interface fa0/2
+ switchport mode trunk
+ switchport trunk allowed vlan 20,30
+exit
+
+interface range fa0/3 - 5
+ switchport mode access
+ switchport access vlan 20
+ spanning-tree portfast
+exit
+
+end
+wr
+
+Switch3 (BOTTOM RIGHT):
+
+enable
+conf t
+
+vlan 20
+vlan 30
+exit
+
+interface fa0/4
+ switchport mode trunk
+ switchport trunk allowed vlan 20,30
+exit
+
+interface range fa0/1 - 3
+ switchport mode access
+ switchport access vlan 30
+ spanning-tree portfast
+exit
+
+end
+wr
+
+STEP 5 — Router0: Routing (OSPF + RIP + redistribution):
+
+enable
+conf t
+
+router ospf 1
+ passive-interface default
+ no passive-interface s0/3/0
+ network 12.2.0.0 0.0.0.3 area 0
+ network 10.10.10.0 0.0.0.31 area 0
+ network 10.10.20.0 0.0.0.255 area 0
+ network 10.10.30.0 0.0.0.255 area 0
+ redistribute rip subnets
+exit
+
+router rip
+ version 2
+ no auto-summary
+ passive-interface default
+ no passive-interface g0/0
+ network 12.1.0.0
+ network 10.10.10.0
+ network 10.10.20.0
+ network 10.10.30.0
+ redistribute ospf 1 metric 2
+exit
+
+end
+wr
+
+STEP 6 — PC IP settings (exactly what to type)
+Left Static LAN (Switch4) — 10.10.10.0/27
+
+Gateway: 10.10.10.1
+Mask: 255.255.255.224
+
+PC10: 10.10.10.10
+
+PC11: 10.10.10.11
+
+PC12: 10.10.10.12
+
+(Desktop → IP Configuration → Static)
+
+Top LAN (PC0) — 10.10.40.0/24
+
+Gateway: 10.10.40.1
+Mask: 255.255.255.0
+
+PC0: 10.10.40.10
+
+Bottom VLAN20 (Switch2 PCs) — 10.10.20.0/24
+
+Gateway: 10.10.20.1
+Mask: 255.255.255.0
+
+PC7: 10.10.20.10
+
+PC8: 10.10.20.11
+
+PC9: 10.10.20.12
+
+Bottom VLAN30 (Switch3 PCs) — 10.10.30.0/24
+
+Gateway: 10.10.30.1
+Mask: 255.255.255.0
+
+PC4: 10.10.30.10
+
+PC5: 10.10.30.11
+
+PC6: 10.10.30.12
+
+Right DHCP LAN (Switch1 PCs) — DHCP
+
+PC1 / PC2 / PC3 → Desktop → IP Configuration → click DHCP
+
+They should get 12.4.0.x automatically.
+
+
+
+STEP 7 — Tests (must work if everything is correct)
+A) Inter-VLAN test
+
+From PC7:
+
+ping 10.10.30.10
+
+
+From PC4:
+
+ping 10.10.20.10
+
+B) Router reachability
+
+From PC7:
+
+ping 10.10.20.1
+
+
+
